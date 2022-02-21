@@ -1,0 +1,19 @@
+.sku {
+    color: grey;
+}
+
+.product{
+    border: dotted 1px gray;
+    margin:20px;
+    padding: 20px;
+}
+
+.price {
+    color: red;
+    font-size: 22px;
+}
+
+.name {
+    font-size: 22px;
+    font-weight: bold;
+}
