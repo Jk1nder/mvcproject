@@ -1,0 +1,189 @@
+<?php
+
+namespace Core;
+
+use Core\Util;
+
+/**
+ * Class Model
+ */
+class Model implements DbModelInterface
+{
+    /**
+     * @var
+     */
+    protected $tableName;
+
+    /**
+     * @var string
+     */
+    protected $idColumn;
+
+    /**
+     * @var array
+     */
+    protected $columns = [];
+
+    /**
+     * @var
+     */
+    protected $collection;
+
+    /**
+     * @var string
+     */
+    protected $sql;
+
+    /**
+     * @var array
+     */
+    protected $params = [];
+
+
+    /**
+     * @return $this
+     */
+    public function initCollection()
+    {
+        $columns = implode(',', $this->getColumns());
+        $this->sql = "select $columns from " . $this->tableName;
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getColumns()
+    {
+        $db = new DB();
+        $sql = "show columns from  $this->tableName;";
+        $results = $db->query($sql);
+        foreach ($results as $result) {
+            array_push($this->columns, $result['Field']);
+        }
+        return $this->columns;
+    }
+
+
+    /**
+     * @param $params
+     * @return $this
+     */
+    public function sort($params)
+    {
+        if (count($params) > 0) {
+            $this->sql .= sprintf(
+                " order by %s",
+                Util::keyValueToList($params, "%s %s")
+            );
+        }
+        return $this;
+    }
+
+    /**
+     * @param $params
+     */
+    public function filter($params)
+    {
+        if (count($params) > 0) {
+            $this->sql .= sprintf(
+                " where %s",
+                Util::keyValueToList($params, "%s=%s")
+            );
+        }
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function getCollection()
+    {
+        $db = new DB();
+        $this->sql .= ";";
+        $this->collection = $db->query($this->sql, $this->params);
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function select()
+    {
+        return $this->collection;
+    }
+
+    /**
+     * @return null
+     */
+    public function selectFirst()
+    {
+        return isset($this->collection[0]) ? $this->collection[0] : null;
+    }
+
+    /**
+     * @param $id
+     * @return mixed
+     */
+    public function getItem($id)
+    {
+        $sql = "select * from $this->tableName where $this->idColumn = ?;";
+        $db = new DB();
+        $params = array($id);
+        return $db->query($sql, $params)[0];
+    }
+
+    /**
+     * @return array
+     */
+    public function getPostValues()
+    {
+        $values = [];
+        $columns = $this->getColumns();
+        foreach ($columns as $column) {
+            $column_value = filter_input(INPUT_POST, $column);
+            if ($column_value && $column !== $this->idColumn) {
+                $values[$column] = $column_value;
+            }
+        }
+        return $values;
+    }
+
+    public function getTableName(): string
+    {
+        return $this->tableName;
+    }
+
+    public function getPrimaryKeyName(): string
+    {
+        return $this->idColumn;
+    }
+
+
+    /**
+     * ERROR
+     */
+    public function getId(): int
+    {
+        return 1;
+    }
+
+
+    public function addItem($values)
+    {
+        $db = new DB();
+        $db->createEntity($this, $values);
+    }
+
+    public function deleteItem($id)
+    {
+        $db = new DB();
+        $db->deleteEntity($this, $id);
+    }
+
+    public function saveItem($id, $values)
+    {
+        $db = new DB();
+        $db->updateEntity($this, $id, $values);
+    }
+}
